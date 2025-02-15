@@ -1,15 +1,17 @@
 package repository
 
 import (
-	"database/"
+	"avito-shop-service/config"
+	"database/sql"
 	"fmt"
 	"log"
+
 	_ "github.com/lib/pq"
-	"avito-shop-service"
 )
 
 func ConnectDB(cfg *config.Config) *sql.DB {
-	dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
+	dsn := fmt.Sprintf(
+		"host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
 		cfg.DBHost, cfg.DBPort, cfg.DBUser, cfg.DBPassword, cfg.DBName,
 	)
 
@@ -22,6 +24,7 @@ func ConnectDB(cfg *config.Config) *sql.DB {
 	if err != nil {
 		log.Fatal("DB is not reachable:", err)
 	}
-	log.Println("Connection to database")
+
+	log.Println("Connected to the database")
 	return db
 }

@@ -1,8 +1,11 @@
+
 version: '3.8'
 
 services:
   avito-shop-service:
-      build: .
+      build:
+        context: ..  # Указываем контекст сборки на родительскую директорию
+        dockerfile: deployments/Dockerfile  # Путь к Dockerfile внутри папки deployments
       container_name: avito-shop-service
       ports:
         - "8080:8080"
@@ -10,10 +13,9 @@ services:
         # енвы подключения к БД
         - DATABASE_PORT=5432
         - DATABASE_USER=postgres
-        - DATABASE_PASSWORD=password
+        - DATABASE_PASSWORD=postgres
         - DATABASE_NAME=shop
         - DATABASE_HOST=db
-        # порт сервиса
         - SERVER_PORT=8080
       depends_on:
         db:
@@ -22,15 +24,15 @@ services:
         - internal
   
   db:
-    image: postgres:13
-    container_name: postgres
+    image: postgres:17
+    container_name: shop_db
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: password
+      POSTGRES_PASSWORD: postgres
       POSTGRES_DB: shop
     volumes:
-      # "./migrations/init.sql" - путь к миграциям БД
-      - ./migrations/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./../internal/db/migrations:/docker-entrypoint-initdb.d
+      - postgres_data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
     healthcheck:
@@ -41,5 +43,8 @@ services:
       start_period: 10s
     networks:
       - internal
+volumes:
+  postgres_data:
+
 networks:
   internal:
