@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"avito-shop-service/internal/models"
 	"avito-shop-service/internal/service"
 	"encoding/json"
 	"net/http"
@@ -19,13 +20,16 @@ func NewWalletHandler(walletService *service.WalletService) *WalletHandler {
 
 // Получение баланса пользователя
 func (h *WalletHandler) GetBalance(w http.ResponseWriter, r *http.Request) {
-	userID, err := strconv.Atoi(mux.Vars(r)["user_id"])
-	if err != nil {
-		http.Error(w, "Invalid user ID", http.StatusBadRequest)
+	var req struct {
+		UserID int `json:"user_id"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request", http.StatusBadRequest)
 		return
 	}
 
-	balance, err := h.walletService.GetBalance(userID)
+	balance, err := h.walletService.GetBalance(req.UserID)
 	if err != nil {
 		http.Error(w, "Failed to get balance", http.StatusInternalServerError)
 		return
@@ -37,6 +41,7 @@ func (h *WalletHandler) GetBalance(w http.ResponseWriter, r *http.Request) {
 // Пополнение баланса
 func (h *WalletHandler) Deposit(w http.ResponseWriter, r *http.Request) {
 	var req struct {
+		UserID int `json:"user_id"`
 		Amount int `json:"amount"`
 	}
 
@@ -45,13 +50,12 @@ func (h *WalletHandler) Deposit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userID, err := strconv.Atoi(mux.Vars(r)["user_id"])
-	if err != nil {
-		http.Error(w, "Invalid user ID", http.StatusBadRequest)
+	if req.Amount <= 0 {
+		http.Error(w, "Invalid deposit amount", http.StatusBadRequest)
 		return
 	}
 
-	if err := h.walletService.Deposit(userID, req.Amount); err != nil {
+	if err := h.walletService.Deposit(req.UserID, req.Amount); err != nil {
 		http.Error(w, "Deposit failed", http.StatusInternalServerError)
 		return
 	}
@@ -86,7 +90,6 @@ func (h *WalletHandler) GetTransactions(w http.ResponseWriter, r *http.Request) 
 		UserID int `json:"user_id"`
 	}
 
-	// Декодируем `user_id` из body
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
@@ -107,6 +110,104 @@ func (h *WalletHandler) GetTransactions(w http.ResponseWriter, r *http.Request) 
 	// Устанавливаем заголовки и отправляем JSON
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(transactions); err != nil {
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+	}
+}
+
+// BuyItem обрабатывает покупку товара
+func (h *WalletHandler) BuyItem(w http.ResponseWriter, r *http.Request) {
+	// Извлекаем item из параметров пути
+	vars := mux.Vars(r)
+	itemName := vars["item"]
+
+	// Извлекаем количество товара из query параметров
+	quantityStr := r.URL.Query().Get("quantity")
+	if quantityStr == "" {
+		quantityStr = "1" // Если количество не указано, по умолчанию 1
+	}
+
+	// Преобразуем количество в int
+	quantity, err := strconv.Atoi(quantityStr)
+	if err != nil || quantity <= 0 {
+		http.Error(w, "Invalid quantity", http.StatusBadRequest)
+		return
+	}
+
+	// Получаем user_id из заголовков (должен быть установлен в middleware)
+	userID := r.Header.Get("UserID")
+
+	// Преобразуем user_id в int
+	userIDInt, err := strconv.Atoi(userID)
+	if err != nil {
+		http.Error(w, "Invalid user ID", http.StatusUnauthorized)
+		return
+	}
+
+	// Получаем цену товара из базы через WalletService
+	itemPrice, err := h.walletService.GetItemPrice(itemName)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+
+	// Вызываем метод для выполнения покупки
+	err = h.walletService.PurchaseItem(userIDInt, itemName, itemPrice, quantity)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Отправляем успешный ответ
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{
+		"message": "Item purchased successfully",
+	})
+}
+
+// Получение информации о монетах, инвентаре и истории транзакций
+func (h *WalletHandler) GetInfo(w http.ResponseWriter, r *http.Request) {
+	// Извлекаем user_id из заголовков (должен быть установлен в middleware)
+	userID := r.Header.Get("UserID")
+
+	// Преобразуем user_id в int
+	userIDInt, err := strconv.Atoi(userID)
+	if err != nil {
+		http.Error(w, "Invalid user ID", http.StatusUnauthorized)
+		return
+	}
+
+	// Получаем баланс пользователя
+	balance, err := h.walletService.GetBalance(userIDInt)
+	if err != nil {
+		http.Error(w, "Failed to get balance", http.StatusInternalServerError)
+		return
+	}
+
+	// Получаем инвентарь пользователя
+	inventory, err := h.walletService.GetInventory(userIDInt)
+	if err != nil {
+		http.Error(w, "Failed to get inventory", http.StatusInternalServerError)
+		return
+	}
+
+	// Получаем транзакции пользователя
+	transactions, err := h.walletService.GetTransactions(userIDInt)
+	if err != nil {
+		http.Error(w, "Failed to get transactions", http.StatusInternalServerError)
+		return
+	}
+
+	// Формируем ответ
+	infoResponse := models.InfoResponse{
+		Balance:      balance,
+		Inventory:    inventory,
+		Transactions: transactions,
+	}
+
+	// Отправляем успешный ответ
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	if err := json.NewEncoder(w).Encode(infoResponse); err != nil {
 		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
 	}
 }

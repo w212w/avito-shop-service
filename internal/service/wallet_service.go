@@ -39,3 +39,31 @@ func (s *WalletService) Transfer(fromUserID, toUserID, amount int) error {
 func (s *WalletService) GetTransactions(userID int) ([]models.Transaction, error) {
 	return s.walletRepo.GetTransactions(userID)
 }
+
+// Покупка товара
+func (s *WalletService) PurchaseItem(userID int, itemName string, price int, quantity int) error {
+	// Проверка на достаточность средств
+	balance, err := s.walletRepo.GetBalance(userID)
+	if err != nil {
+		return err
+	}
+
+	totalCost := price * quantity
+	if balance < totalCost {
+		return errors.New("insufficient funds")
+	}
+
+	// Обновление баланса и добавление записи о покупке
+	return s.walletRepo.PurchaseItem(userID, itemName, price, quantity)
+}
+
+// Получение цены товара
+func (s *WalletService) GetItemPrice(itemName string) (int, error) {
+	return s.walletRepo.GetItemPrice(itemName)
+}
+
+// Получение инвентаря пользователя
+func (s *WalletService) GetInventory(userID int) ([]models.Item, error) {
+	items, err := s.walletRepo.GetInventory(userID)
+	return items, err
+}

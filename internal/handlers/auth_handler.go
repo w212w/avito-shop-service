@@ -14,7 +14,7 @@ func NewAuthHandler(authService *service.AuthService) *AuthHandler {
 	return &AuthHandler{authService: authService}
 }
 
-func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
+func (h *AuthHandler) Auth(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Username string `json:"username"`
 		Password string `json:"password"`
@@ -25,28 +25,30 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.authService.Register(req.Username, req.Password); err != nil {
-		http.Error(w, "User already exists", http.StatusConflict)
+	// Проверка на пустое имя пользователя и пароль
+	if req.Username == "" || req.Password == "" {
+		http.Error(w, "Username and password cannot be empty", http.StatusBadRequest)
 		return
 	}
 
-	w.WriteHeader(http.StatusCreated)
-}
-
-func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
-	var req struct {
-		Username string `json:"username"`
-		Password string `json:"password"`
-	}
-
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request", http.StatusBadRequest)
-		return
-	}
-
+	// Сначала пробуем залогиниться
 	token, err := h.authService.Login(req.Username, req.Password)
+	if err == nil {
+		// Если аутентификация успешна, возвращаем токен
+		json.NewEncoder(w).Encode(map[string]string{"token": token})
+		return
+	}
+
+	// Если ошибка не в аутентификации (например, пользователь не существует), регистрируем нового пользователя
+	if err := h.authService.Register(req.Username, req.Password); err != nil {
+		http.Error(w, "User registration failed", http.StatusConflict)
+		return
+	}
+
+	// После успешной регистрации аутентифицируем пользователя и возвращаем токен
+	token, err = h.authService.Login(req.Username, req.Password)
 	if err != nil {
-		http.Error(w, "Invalid credentials", http.StatusUnauthorized)
+		http.Error(w, "Error during login after registration", http.StatusInternalServerError)
 		return
 	}
 

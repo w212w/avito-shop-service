@@ -3,6 +3,7 @@ package main
 import (
 	"avito-shop-service/config"
 	"avito-shop-service/internal/handlers"
+	"avito-shop-service/internal/middleware"
 	"avito-shop-service/internal/repository"
 	"avito-shop-service/internal/service"
 	"log"
@@ -16,21 +17,38 @@ func main() {
 	db := repository.ConnectDB(cfg)
 	defer db.Close()
 
+	// Инициализируем репозитории
 	userRepo := repository.NewUserRepository(db)
-	authService := service.NewAuthService(userRepo, cfg.JWTSecret)
-	authHandler := handlers.NewAuthHandler(authService)
 	walletRepo := repository.NewWalletRepository(db)
+
+	// Инициализируем сервисы
+	authService := service.NewAuthService(userRepo, cfg.JWTSecret)
 	walletService := service.NewWalletService(walletRepo)
+
+	// Инициализируем обработчики
+	authHandler := handlers.NewAuthHandler(authService)
 	walletHandler := handlers.NewWalletHandler(walletService)
 
+	// Создаем роутер
 	router := mux.NewRouter()
 
-	router.HandleFunc("/api/register", authHandler.Register).Methods("POST")
-	router.HandleFunc("/api/login", authHandler.Login).Methods("POST")
-	router.HandleFunc("/api/wallet/{user_id}/balance", walletHandler.GetBalance).Methods("GET")
-	router.HandleFunc("/api/wallet/{user_id}/deposit", walletHandler.Deposit).Methods("POST")
-	router.HandleFunc("/api/wallet/transfer", walletHandler.Transfer).Methods("POST")
-	router.HandleFunc("/api/transactions", walletHandler.GetTransactions).Methods("POST")
+	// Применяем middleware для защищенных маршрутов
+	// Регистрация и вход не требуют аутентификации, поэтому их не защищаем
+	router.HandleFunc("/api/auth", authHandler.Auth).Methods("POST")
+
+	// Защищенные маршруты с middleware
+	protected := router.PathPrefix("/api").Subrouter()
+	protected.Use(middleware.AuthMiddleware(authService)) // Защищаем все роуты внутри /api
+
+	// Роуты, которые требуют аутентификации
+	protected.HandleFunc("/info", walletHandler.GetInfo).Methods("GET")
+	protected.HandleFunc("/sendCoin", walletHandler.Transfer).Methods("POST")
+	protected.HandleFunc("/buy/{item}", walletHandler.BuyItem).Methods("POST")
+
+	// Дополнительные роуты, использованные для тестирования
+	protected.HandleFunc("/wallet/balance", walletHandler.GetBalance).Methods("GET")
+	protected.HandleFunc("/wallet/deposit", walletHandler.Deposit).Methods("POST")
+	protected.HandleFunc("/transactions", walletHandler.GetTransactions).Methods("POST")
 
 	log.Println("Server started on :8080")
 	log.Fatal(http.ListenAndServe(":8080", router))
