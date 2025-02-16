@@ -65,10 +65,20 @@ func (h *WalletHandler) Deposit(w http.ResponseWriter, r *http.Request) {
 
 // Перевод монет между пользователями
 func (h *WalletHandler) Transfer(w http.ResponseWriter, r *http.Request) {
+	// Получаем user_id из заголовков (устанавливается в middleware)
+	userID := r.Header.Get("UserID")
+
+	// Преобразуем userID в int
+	fromUserID, err := strconv.Atoi(userID)
+	if err != nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	// Парсим тело запроса
 	var req struct {
-		FromUserID int `json:"from_user_id"` // Добавляем fromUserID в тело запроса
-		ToUserID   int `json:"to_user_id"`
-		Amount     int `json:"amount"`
+		ToUserID int `json:"to_user_id"`
+		Amount   int `json:"amount"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -76,32 +86,36 @@ func (h *WalletHandler) Transfer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.walletService.Transfer(req.FromUserID, req.ToUserID, req.Amount); err != nil {
+	// Проверяем, что пользователь не переводит монеты самому себе
+	if fromUserID == req.ToUserID {
+		http.Error(w, "Cannot transfer to yourself", http.StatusBadRequest)
+		return
+	}
+
+	// Выполняем перевод через сервис
+	if err := h.walletService.Transfer(fromUserID, req.ToUserID, req.Amount); err != nil {
 		http.Error(w, "Transfer failed", http.StatusInternalServerError)
 		return
 	}
 
+	// Успешный ответ
 	w.WriteHeader(http.StatusOK)
 }
 
 // Получение информации о истории транзакций
 func (h *WalletHandler) GetTransactions(w http.ResponseWriter, r *http.Request) {
-	var req struct {
-		UserID int `json:"user_id"`
-	}
+	// Получаем user_id из заголовка (должен быть установлен в middleware)
+	userIDStr := r.Header.Get("UserID")
 
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+	// Преобразуем user_id в int
+	userID, err := strconv.Atoi(userIDStr)
+	if err != nil {
+		http.Error(w, "Invalid user ID", http.StatusUnauthorized)
 		return
 	}
 
-	if req.UserID <= 0 {
-		http.Error(w, "Invalid user ID", http.StatusBadRequest)
-		return
-	}
-
-	// Получаем транзакции
-	transactions, err := h.walletService.GetTransactions(req.UserID)
+	// Получаем транзакции пользователя
+	transactions, err := h.walletService.GetTransactions(userID)
 	if err != nil {
 		http.Error(w, "Failed to get transactions", http.StatusInternalServerError)
 		return
@@ -109,6 +123,7 @@ func (h *WalletHandler) GetTransactions(w http.ResponseWriter, r *http.Request) 
 
 	// Устанавливаем заголовки и отправляем JSON
 	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
 	if err := json.NewEncoder(w).Encode(transactions); err != nil {
 		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
 	}

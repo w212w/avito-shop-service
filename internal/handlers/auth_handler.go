@@ -39,7 +39,7 @@ func (h *AuthHandler) Auth(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Если ошибка не в аутентификации (например, пользователь не существует), регистрируем нового пользователя
+	// Если ошибка (пользователя не сущетвует - первая аутентификация), регистрируем нового пользователя
 	if err := h.authService.Register(req.Username, req.Password); err != nil {
 		http.Error(w, "User registration failed", http.StatusConflict)
 		return
