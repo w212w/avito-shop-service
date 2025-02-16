@@ -18,51 +18,6 @@ func NewWalletHandler(walletService *service.WalletService) *WalletHandler {
 	return &WalletHandler{walletService: walletService}
 }
 
-// Получение баланса пользователя
-func (h *WalletHandler) GetBalance(w http.ResponseWriter, r *http.Request) {
-	var req struct {
-		UserID int `json:"user_id"`
-	}
-
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request", http.StatusBadRequest)
-		return
-	}
-
-	balance, err := h.walletService.GetBalance(req.UserID)
-	if err != nil {
-		http.Error(w, "Failed to get balance", http.StatusInternalServerError)
-		return
-	}
-
-	json.NewEncoder(w).Encode(map[string]int{"balance": balance})
-}
-
-// Пополнение баланса
-func (h *WalletHandler) Deposit(w http.ResponseWriter, r *http.Request) {
-	var req struct {
-		UserID int `json:"user_id"`
-		Amount int `json:"amount"`
-	}
-
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request", http.StatusBadRequest)
-		return
-	}
-
-	if req.Amount <= 0 {
-		http.Error(w, "Invalid deposit amount", http.StatusBadRequest)
-		return
-	}
-
-	if err := h.walletService.Deposit(req.UserID, req.Amount); err != nil {
-		http.Error(w, "Deposit failed", http.StatusInternalServerError)
-		return
-	}
-
-	w.WriteHeader(http.StatusOK)
-}
-
 // Перевод монет между пользователями
 func (h *WalletHandler) Transfer(w http.ResponseWriter, r *http.Request) {
 	// Получаем user_id из заголовков (устанавливается в middleware)
@@ -174,9 +129,12 @@ func (h *WalletHandler) BuyItem(w http.ResponseWriter, r *http.Request) {
 
 	// Отправляем успешный ответ
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]string{
+	if err := json.NewEncoder(w).Encode(map[string]string{
 		"message": "Item purchased successfully",
-	})
+	}); err != nil {
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+	}
+
 }
 
 // Получение информации о монетах, инвентаре и истории транзакций

@@ -11,11 +11,11 @@ import (
 )
 
 type AuthService struct {
-	userRepo  *repository.UserRepository
+	userRepo  repository.UserRepositoryInterface
 	secretKey string
 }
 
-func NewAuthService(userRepo *repository.UserRepository, secretKey string) *AuthService {
+func NewAuthService(userRepo repository.UserRepositoryInterface, secretKey string) *AuthService {
 	return &AuthService{userRepo: userRepo, secretKey: secretKey}
 }
 
@@ -71,7 +71,7 @@ func (s *AuthService) Login(username, password string) (string, error) {
 
 // ParseToken парсит и проверяет токен, возвращает user_id
 func (s *AuthService) ParseToken(tokenStr string) (int, error) {
-	token, err := jwt.Parse(tokenStr, func(token *jwt.Token) (interface{}, error) {
+	token, err := jwt.Parse(tokenStr, func(_ *jwt.Token) (interface{}, error) {
 		return []byte(s.secretKey), nil
 	})
 

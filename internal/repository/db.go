@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 
+	// Импортируем PostgreSQL
 	_ "github.com/lib/pq"
 )
 

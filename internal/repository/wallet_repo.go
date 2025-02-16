@@ -4,18 +4,28 @@ import (
 	"avito-shop-service/internal/models"
 	"database/sql"
 	"errors"
+	"log"
 )
 
-type WalletRepository struct {
+type WalletRepository interface {
+	GetBalance(userID int) (int, error)
+	Transfer(fromUserID, toUserID, amount int) error
+	GetTransactions(userID int) ([]models.Transaction, error)
+	PurchaseItem(userID int, itemName string, price int, quantity int) error
+	GetInventory(userID int) ([]models.Item, error)
+	GetItemPrice(itemName string) (int, error)
+}
+
+type PostgresWalletRepository struct {
 	db *sql.DB
 }
 
-func NewWalletRepository(db *sql.DB) *WalletRepository {
-	return &WalletRepository{db: db}
+func NewPostgresWalletRepository(db *sql.DB) *PostgresWalletRepository {
+	return &PostgresWalletRepository{db: db}
 }
 
 // Получение баланса пользователя (coins)
-func (r *WalletRepository) GetBalance(userID int) (int, error) {
+func (r *PostgresWalletRepository) GetBalance(userID int) (int, error) {
 	var balance int
 	err := r.db.QueryRow("SELECT coins FROM users WHERE id = $1", userID).Scan(&balance)
 
@@ -29,13 +39,13 @@ func (r *WalletRepository) GetBalance(userID int) (int, error) {
 }
 
 // Обновление баланса пользователя (coins)
-func (r *WalletRepository) UpdateBalance(userID int, amount int) error {
+func (r *PostgresWalletRepository) UpdateBalance(userID int, amount int) error {
 	_, err := r.db.Exec("UPDATE users SET coins = coins + $1 WHERE id = $2", amount, userID)
 	return err
 }
 
 // Перевод монет между пользователями
-func (r *WalletRepository) Transfer(fromUserID, toUserID, amount int) error {
+func (r *PostgresWalletRepository) Transfer(fromUserID, toUserID, amount int) error {
 	tx, err := r.db.Begin()
 	if err != nil {
 		return err
@@ -45,26 +55,37 @@ func (r *WalletRepository) Transfer(fromUserID, toUserID, amount int) error {
 	var senderBalance int
 	err = tx.QueryRow("SELECT coins FROM users WHERE id = $1", fromUserID).Scan(&senderBalance)
 	if err != nil {
-		tx.Rollback()
+		if err := tx.Rollback(); err != nil {
+			log.Printf("rollback failed: %v", err)
+		}
 		return err
 	}
 
 	if senderBalance < amount {
-		tx.Rollback()
+		if err := tx.Rollback(); err != nil {
+			log.Printf("rollback failed: %v", err)
+		}
+
 		return errors.New("insufficient funds")
 	}
 
 	// Вычитаем монеты у отправителя
 	_, err = tx.Exec("UPDATE users SET coins = coins - $1 WHERE id = $2", amount, fromUserID)
 	if err != nil {
-		tx.Rollback()
+		if err := tx.Rollback(); err != nil {
+			log.Printf("rollback failed: %v", err)
+		}
+
 		return err
 	}
 
 	// Добавляем монеты получателю
 	_, err = tx.Exec("UPDATE users SET coins = coins + $1 WHERE id = $2", amount, toUserID)
 	if err != nil {
-		tx.Rollback()
+		if err := tx.Rollback(); err != nil {
+			log.Printf("rollback failed: %v", err)
+		}
+
 		return err
 	}
 
@@ -74,14 +95,17 @@ func (r *WalletRepository) Transfer(fromUserID, toUserID, amount int) error {
 		fromUserID, toUserID, amount,
 	)
 	if err != nil {
-		tx.Rollback()
+		if err := tx.Rollback(); err != nil {
+			log.Printf("rollback failed: %v", err)
+		}
+
 		return err
 	}
 
 	return tx.Commit()
 }
 
-func (r *WalletRepository) GetTransactions(userID int) ([]models.Transaction, error) {
+func (r *PostgresWalletRepository) GetTransactions(userID int) ([]models.Transaction, error) {
 	rows, err := r.db.Query(`
 		SELECT id, from_user_id, to_user_id, amount, created_at 
 		FROM transactions 
@@ -107,7 +131,7 @@ func (r *WalletRepository) GetTransactions(userID int) ([]models.Transaction, er
 }
 
 // Получение цены товара из базы данных
-func (r *WalletRepository) GetItemPrice(itemName string) (int, error) {
+func (r *PostgresWalletRepository) GetItemPrice(itemName string) (int, error) {
 	var price int
 	err := r.db.QueryRow("SELECT price FROM shop WHERE item = $1", itemName).Scan(&price)
 	if err != nil {
@@ -120,7 +144,7 @@ func (r *WalletRepository) GetItemPrice(itemName string) (int, error) {
 }
 
 // Покупка товара
-func (r *WalletRepository) PurchaseItem(userID int, itemName string, price int, quantity int) error {
+func (r *PostgresWalletRepository) PurchaseItem(userID int, itemName string, price int, quantity int) error {
 	// Начинаем транзакцию
 	tx, err := r.db.Begin()
 	if err != nil {
@@ -131,27 +155,39 @@ func (r *WalletRepository) PurchaseItem(userID int, itemName string, price int, 
 	var userBalance int
 	err = tx.QueryRow("SELECT coins FROM users WHERE id = $1", userID).Scan(&userBalance)
 	if err != nil {
-		tx.Rollback()
+		if err := tx.Rollback(); err != nil {
+			log.Printf("rollback failed: %v", err)
+		}
+
 		return err
 	}
 
 	totalPrice := price * quantity
 	if userBalance < totalPrice {
-		tx.Rollback()
+		if err := tx.Rollback(); err != nil {
+			log.Printf("rollback failed: %v", err)
+		}
+
 		return errors.New("insufficient funds")
 	}
 
 	// Обновляем баланс пользователя
 	_, err = tx.Exec("UPDATE users SET coins = coins - $1 WHERE id = $2", totalPrice, userID)
 	if err != nil {
-		tx.Rollback()
+		if err := tx.Rollback(); err != nil {
+			log.Printf("rollback failed: %v", err)
+		}
+
 		return err
 	}
 
 	// Записываем покупку в таблицу purchases
 	_, err = tx.Exec("INSERT INTO purchases (user_id, item, price, quantity) VALUES ($1, $2, $3, $4)", userID, itemName, price, quantity)
 	if err != nil {
-		tx.Rollback()
+		if err := tx.Rollback(); err != nil {
+			log.Printf("rollback failed: %v", err)
+		}
+
 		return err
 	}
 
@@ -160,8 +196,11 @@ func (r *WalletRepository) PurchaseItem(userID int, itemName string, price int, 
 }
 
 // Получение инвентаря пользователя
-func (r *WalletRepository) GetInventory(userID int) ([]models.Item, error) {
-	rows, err := r.db.Query("SELECT item, price, quantity FROM purchases WHERE user_id = $1", userID)
+func (r *PostgresWalletRepository) GetInventory(userID int) ([]models.Item, error) {
+	rows, err := r.db.Query(`SELECT item, price, SUM(quantity) as quantity
+        FROM purchases 
+        WHERE user_id = $1 
+        GROUP BY item, price`, userID)
 	if err != nil {
 		return nil, err
 	}

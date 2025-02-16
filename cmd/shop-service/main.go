@@ -19,7 +19,7 @@ func main() {
 
 	// Инициализируем репозитории
 	userRepo := repository.NewUserRepository(db)
-	walletRepo := repository.NewWalletRepository(db)
+	walletRepo := repository.NewPostgresWalletRepository(db)
 
 	// Инициализируем сервисы
 	authService := service.NewAuthService(userRepo, cfg.JWTSecret)
@@ -45,11 +45,10 @@ func main() {
 	protected.HandleFunc("/sendCoin", walletHandler.Transfer).Methods("POST")
 	protected.HandleFunc("/buy/{item}", walletHandler.BuyItem).Methods("POST")
 
-	// Дополнительные роуты, использованные для тестирования
-	protected.HandleFunc("/wallet/balance", walletHandler.GetBalance).Methods("GET")
-	protected.HandleFunc("/wallet/deposit", walletHandler.Deposit).Methods("POST")
-	protected.HandleFunc("/transactions", walletHandler.GetTransactions).Methods("POST")
-
 	log.Println("Server started on :8080")
-	log.Fatal(http.ListenAndServe(":8080", router))
+
+	if err := http.ListenAndServe(":8080", router); err != nil {
+		log.Fatalf("Server failed: %v", err)
+	}
+
 }
