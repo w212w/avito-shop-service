@@ -31,10 +31,10 @@ func (h *AuthHandler) Auth(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Сначала пробуем залогиниться
+	// Попытка авторизации
 	token, err := h.authService.Login(req.Username, req.Password)
 	if err == nil {
-		// Если аутентификация успешна, возвращаем токен
+		// Если авторизация успешна, возвращаем токен
 		if err := json.NewEncoder(w).Encode(map[string]string{"token": token}); err != nil {
 			http.Error(w, "Failed to encode response", http.StatusInternalServerError)
 		}
@@ -48,7 +48,7 @@ func (h *AuthHandler) Auth(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// После успешной регистрации аутентифицируем пользователя и возвращаем токен
+	// После успешной регистрации авторизуем пользователя и возвращаем токен
 	token, err = h.authService.Login(req.Username, req.Password)
 	if err != nil {
 		http.Error(w, "Error during login after registration", http.StatusInternalServerError)

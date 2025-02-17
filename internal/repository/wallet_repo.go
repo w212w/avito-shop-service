@@ -24,7 +24,7 @@ func NewPostgresWalletRepository(db *sql.DB) *PostgresWalletRepository {
 	return &PostgresWalletRepository{db: db}
 }
 
-// Получение баланса пользователя (coins)
+// Получение баланса пользователя
 func (r *PostgresWalletRepository) GetBalance(userID int) (int, error) {
 	var balance int
 	err := r.db.QueryRow("SELECT coins FROM users WHERE id = $1", userID).Scan(&balance)
@@ -38,7 +38,7 @@ func (r *PostgresWalletRepository) GetBalance(userID int) (int, error) {
 	return balance, nil
 }
 
-// Обновление баланса пользователя (coins)
+// Обновление баланса пользователя
 func (r *PostgresWalletRepository) UpdateBalance(userID int, amount int) error {
 	_, err := r.db.Exec("UPDATE users SET coins = coins + $1 WHERE id = $2", amount, userID)
 	return err

@@ -30,8 +30,8 @@ func (s *AuthService) Register(username, password string) error {
 	// Создание пользователя с хешированным паролем
 	user := &models.User{
 		Username:     username,
-		PasswordHash: string(hashedPassword), // Используем PasswordHash
-		Coins:        1000,                   // Начальный баланс, можно поменять на 0
+		PasswordHash: string(hashedPassword),
+		Coins:        1000, // Начальный баланс
 	}
 
 	// Сохраняем пользователя в базе данных
@@ -40,7 +40,6 @@ func (s *AuthService) Register(username, password string) error {
 
 // Login выполняет проверку пользователя и создает JWT-токен
 func (s *AuthService) Login(username, password string) (string, error) {
-	// Получаем пользователя по имени
 	user, err := s.userRepo.GetUserByUsername(username)
 	if err != nil {
 		return "", err

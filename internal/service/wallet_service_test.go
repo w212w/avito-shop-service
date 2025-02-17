@@ -1,15 +1,14 @@
-package service_test
+package service
 
 import (
 	"avito-shop-service/internal/models"
-	"avito-shop-service/internal/service"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
 
-// Mock для WalletRepository
+// Mock WalletRepository
 type MockWalletRepository struct {
 	mock.Mock
 }
@@ -44,10 +43,10 @@ func (m *MockWalletRepository) GetInventory(userID int) ([]models.Item, error) {
 	return args.Get(0).([]models.Item), args.Error(1)
 }
 
-// ✅ Тест на получение баланса
+// Получение баланса
 func TestGetBalance(t *testing.T) {
 	mockRepo := new(MockWalletRepository)
-	service := service.NewWalletService(mockRepo)
+	service := NewWalletService(mockRepo)
 
 	mockRepo.On("GetBalance", 10).Return(1000, nil)
 
@@ -59,23 +58,23 @@ func TestGetBalance(t *testing.T) {
 	mockRepo.AssertExpectations(t)
 }
 
-// // ✅ Тест на перевод монет
-// func TestTransfer(t *testing.T) {
-// 	mockRepo := new(MockWalletRepository)
-// 	service := service.NewWalletService(mockRepo)
+// Перевод монет
+func TestTransfer(t *testing.T) {
+	mockRepo := new(MockWalletRepository)
+	service := NewWalletService(mockRepo)
 
-// 	mockRepo.On("Transfer", 1, 2, 300).Return(nil)
+	mockRepo.On("Transfer", 1, 2, 300).Return(nil)
 
-// 	err := service.Transfer(1, 2, 300)
+	err := service.Transfer(1, 2, 300)
 
-// 	assert.NoError(t, err)
-// 	mockRepo.AssertExpectations(t)
-// }
+	assert.NoError(t, err)
+	mockRepo.AssertExpectations(t)
+}
 
-// ✅ Тест на покупку товара
+// ПокупкА товара
 func TestPurchaseItem(t *testing.T) {
 	mockRepo := new(MockWalletRepository)
-	service := service.NewWalletService(mockRepo)
+	service := NewWalletService(mockRepo)
 
 	mockRepo.On("GetBalance", 1).Return(1000, nil)
 	mockRepo.On("PurchaseItem", 1, "T-Shirt", 200, 2).Return(nil)
@@ -88,7 +87,7 @@ func TestPurchaseItem(t *testing.T) {
 
 func TestGetInventory(t *testing.T) {
 	mockRepo := new(MockWalletRepository)
-	service := service.NewWalletService(mockRepo)
+	service := NewWalletService(mockRepo)
 
 	expectedInventory := []models.Item{
 		{Name: "book", Price: 50},
@@ -107,7 +106,7 @@ func TestGetInventory(t *testing.T) {
 
 func TestGetTransactions(t *testing.T) {
 	mockRepo := new(MockWalletRepository)
-	service := service.NewWalletService(mockRepo)
+	service := NewWalletService(mockRepo)
 
 	expectedTransactions := []models.Transaction{
 		{FromUserID: 1, ToUserID: 2, Amount: 200},
