@@ -17,6 +17,7 @@ cd avito-shop-service
 
 
 ```bash
+# .env файл
 DB_HOST=localhost
 DB_PORT=5432
 DB_USER=postgres
