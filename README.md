@@ -101,7 +101,7 @@ go test -cover  ./...
 - avito-shop-service/internal/handlers
 
 
-### 6. Запуск линтера
+### 7. Запуск линтера
 ```bash
 golangci-lint run
 ```
