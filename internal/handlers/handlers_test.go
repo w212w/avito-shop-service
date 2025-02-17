@@ -68,7 +68,6 @@ func getValidToken() string {
 	var resp map[string]string
 	err := json.Unmarshal(w.Body.Bytes(), &resp)
 	if err != nil {
-		// Можно залогировать ошибку
 		fmt.Printf("Ошибка парсинга JSON: %v\n", err)
 		return ""
 	}
