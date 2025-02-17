@@ -12,8 +12,9 @@ cd avito-shop-service
 ### 2. Настройка конфигурации
 - Корневая директория - avito-shop-service.
 - docker-compose.yml расположен в avito-shop-service/deployments
+- ✅ Если база данных развертывается с помощью Docker Compose, а **сервис запускается локально**, **ОБЯЗАТЕЛЬНО СОЗДАЙТЕ .env в корневой директории проекта** и добавьте переменные описанные ниже. (Предпочтительный способ развертывания, так как не все тесты работают через полное развертывание приложения и БД в docker-compose)
 - Когда база данных и сервис развертывается с помощью Docker Compose, .env файл **НУЖНО УДАЛИТЬ, ДОПОЛНИТЕЛЬНО ЗАДАВАТЬ ПЕРЕМЕННЫЕ ОКРУЖЕНИЯ И КОНФИГУРАЦИОННЫЕ ПАРАМЕТРЫ НЕ НУЖНО**.
-- Если база данных развертывается с помощью Docker Compose, а **сервис запускается локально**, **ОБЯЗАТЕЛЬНО СОЗДАЙТЕ .env в корневой директории проекта** и добавьте следующие переменные:
+
 
 ```bash
 DB_HOST=localhost
@@ -93,9 +94,12 @@ go test -cover  ./...
 Тесты расположены в следующих директориях:
 - avito-shop-service/internal/service
 - avito-shop-service/internal/handlers
-- 
+**Результаты тестов:**
+- ok      avito-shop-service/internal/handlers    1.387s  coverage: 46.5% of statements
+- ok      avito-shop-service/internal/service     (cached) coverage: 61.9% of statements
+
   ### 6. Запуск линтера
 ```bash
 golangci-lint run
 ```
-- Описание конфигурации линтера (.golangci.yaml) в корневой директории (avito-shop-service).
+- Описание конфигурации линтера (.golangci.yaml) расположено в корневой директории (avito-shop-service).
