@@ -40,7 +40,7 @@ go run main.go
 ### 5. Применение миграций
 При запуске приложения миграции для создания таблиц в базе данных будут применены автоматически. 
 - Миграции расположены в avito-shop-service/internal/db/migrations
-В БД создаются следующие таблицы:
+- В БД создаются следующие таблицы:
 ```bash
 CREATE TABLE IF NOT EXISTS users (
     id SERIAL PRIMARY KEY,
@@ -92,14 +92,16 @@ ON CONFLICT (item) DO NOTHING;
 go test ./...
 go test -cover  ./...
 ```
+**Результаты тестов:**
+- ok      avito-shop-service/internal/handlers    1.387s  coverage: 46.5% of statements
+- ok      avito-shop-service/internal/service     (cached) coverage: 61.9% of statements<br>
+
 Тесты расположены в следующих директориях:
 - avito-shop-service/internal/service
 - avito-shop-service/internal/handlers
-**Результаты тестов:**
-- ok      avito-shop-service/internal/handlers    1.387s  coverage: 46.5% of statements
-- ok      avito-shop-service/internal/service     (cached) coverage: 61.9% of statements
 
-  ### 6. Запуск линтера
+
+### 6. Запуск линтера
 ```bash
 golangci-lint run
 ```
