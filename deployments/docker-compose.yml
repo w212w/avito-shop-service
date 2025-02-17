@@ -4,8 +4,8 @@ version: '3.8'
 services:
   avito-shop-service:
       build:
-        context: ..  # Указываем контекст сборки на родительскую директорию
-        dockerfile: deployments/Dockerfile  # Путь к Dockerfile внутри папки deployments
+        context: ..
+        dockerfile: deployments/Dockerfile
       container_name: avito-shop-service
       ports:
         - "8080:8080"

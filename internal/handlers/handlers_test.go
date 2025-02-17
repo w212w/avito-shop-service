@@ -1,13 +1,13 @@
-package service_test
+package handlers
 
 import (
 	"avito-shop-service/config"
-	"avito-shop-service/internal/handlers"
 	"avito-shop-service/internal/middleware"
 	"avito-shop-service/internal/repository"
 	"avito-shop-service/internal/service"
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -18,7 +18,14 @@ import (
 
 func setupRouter() *mux.Router {
 
-	cfg := config.LoadConfig()
+	cfg := &config.Config{
+		DBHost:     "localhost",
+		DBPort:     "5432",
+		DBUser:     "postgres",
+		DBPassword: "postgres",
+		DBName:     "shop",
+		JWTSecret:  "supersecretkey",
+	}
 	db := repository.ConnectDB(cfg)
 
 	userRepo := repository.NewUserRepository(db)
@@ -27,18 +34,16 @@ func setupRouter() *mux.Router {
 	authService := service.NewAuthService(userRepo, cfg.JWTSecret)
 	walletService := service.NewWalletService(walletRepo)
 
-	authHandler := handlers.NewAuthHandler(authService)
-	walletHandler := handlers.NewWalletHandler(walletService)
+	authHandler := NewAuthHandler(authService)
+	walletHandler := NewWalletHandler(walletService)
 
 	router := mux.NewRouter()
 
 	router.HandleFunc("/api/auth", authHandler.Auth).Methods("POST")
 
-	// Защищенные маршруты с middleware
 	protected := router.PathPrefix("/api").Subrouter()
 	protected.Use(middleware.AuthMiddleware(authService))
 
-	// Роуты, которые требуют аутентификации
 	protected.HandleFunc("/info", walletHandler.GetInfo).Methods("GET")
 	protected.HandleFunc("/sendCoin", walletHandler.Transfer).Methods("POST")
 	protected.HandleFunc("/buy/{item}", walletHandler.BuyItem).Methods("POST")
@@ -46,6 +51,7 @@ func setupRouter() *mux.Router {
 	return router
 }
 
+// Получение токена
 func getValidToken() string {
 	reqBody, _ := json.Marshal(map[string]string{
 		"username": "testuser",
@@ -60,7 +66,12 @@ func getValidToken() string {
 	router.ServeHTTP(w, req)
 
 	var resp map[string]string
-	json.Unmarshal(w.Body.Bytes(), &resp)
+	err := json.Unmarshal(w.Body.Bytes(), &resp)
+	if err != nil {
+		// Можно залогировать ошибку
+		fmt.Printf("Ошибка парсинга JSON: %v\n", err)
+		return ""
+	}
 
 	return resp["token"]
 }

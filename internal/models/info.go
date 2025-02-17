@@ -2,6 +2,7 @@ package models
 
 import "time"
 
+// Структура транзакции
 type Transaction struct {
 	ID         int       `json:"id"`
 	FromUserID int       `json:"from_user_id"`
@@ -10,14 +11,14 @@ type Transaction struct {
 	CreatedAt  time.Time `json:"created_at"`
 }
 
-// InfoResponse - структура для ответа на запрос /api/info
+// Структура для ответа на запрос /api/info
 type InfoResponse struct {
 	Balance      int           `json:"balance"`
-	Inventory    []Item        `json:"inventory"`    // Предполагаем, что Item - это структура для товара
-	Transactions []Transaction `json:"transactions"` // Структура для транзакций
+	Inventory    []Item        `json:"inventory"`
+	Transactions []Transaction `json:"transactions"`
 }
 
-// Item - структура для представления предмета в инвентаре
+// Структура для представления предмета в инвентаре
 type Item struct {
 	Name     string `json:"name"`
 	Price    int    `json:"price"`

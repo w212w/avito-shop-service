@@ -29,16 +29,15 @@ func main() {
 	authHandler := handlers.NewAuthHandler(authService)
 	walletHandler := handlers.NewWalletHandler(walletService)
 
-	// Создаем роутер
 	router := mux.NewRouter()
 
 	// Применяем middleware для защищенных маршрутов
-	// Регистрация и вход не требуют аутентификации, поэтому их не защищаем
+	// Регистрация и вход не требуют аутентификации
 	router.HandleFunc("/api/auth", authHandler.Auth).Methods("POST")
 
 	// Защищенные маршруты с middleware
 	protected := router.PathPrefix("/api").Subrouter()
-	protected.Use(middleware.AuthMiddleware(authService)) // Защищаем все роуты внутри /api
+	protected.Use(middleware.AuthMiddleware(authService))
 
 	// Роуты, которые требуют аутентификации
 	protected.HandleFunc("/info", walletHandler.GetInfo).Methods("GET")

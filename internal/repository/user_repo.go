@@ -45,7 +45,6 @@ func (r *UserRepository) GetUserByUsername(username string) (*models.User, error
 
 // UpdateCoins обновляет баланс пользователя
 func (r *UserRepository) UpdateCoins(userID int, amount int) error {
-	// Проверка на положительный баланс
 	if amount < 0 {
 		return fmt.Errorf("amount cannot be negative")
 	}
