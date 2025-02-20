@@ -21,8 +21,23 @@ func LoadConfig() *Config {
 	if err != nil {
 		log.Println("No .env file")
 	}
+
+	appEnv := getEnv("APP_ENV", "local")
+
+	if appEnv == "docker" {
+		log.Println("Running in Docker mode, ignoring .env file")
+		return &Config{
+			DBHost:     getEnv("DB_HOST", "db"),
+			DBPort:     getEnv("DB_PORT", "5432"),
+			DBUser:     getEnv("DB_USER", "postgres"),
+			DBPassword: getEnv("DB_PASSWORD", "postgres"),
+			DBName:     getEnv("DB_NAME", "shop"),
+			JWTSecret:  getEnv("JWT_SECRET", "supersecretkey"),
+		}
+	}
+
 	return &Config{
-		DBHost:     getEnv("DB_HOST", "db"),
+		DBHost:     getEnv("DB_HOST", "localhost"),
 		DBPort:     getEnv("DB_PORT", "5432"),
 		DBUser:     getEnv("DB_USER", "postgres"),
 		DBPassword: getEnv("DB_PASSWORD", "postgres"),

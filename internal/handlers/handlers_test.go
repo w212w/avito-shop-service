@@ -17,33 +17,32 @@ import (
 )
 
 func setupRouter() *mux.Router {
-
-	cfg := &config.Config{
-		DBHost:     "localhost",
-		DBPort:     "5432",
-		DBUser:     "postgres",
-		DBPassword: "postgres",
-		DBName:     "shop",
-		JWTSecret:  "supersecretkey",
-	}
+	cfg := config.LoadConfig()
 	db := repository.ConnectDB(cfg)
 
+	// Инициализируем репозитории
 	userRepo := repository.NewUserRepository(db)
 	walletRepo := repository.NewPostgresWalletRepository(db)
 
+	// Инициализируем сервисы
 	authService := service.NewAuthService(userRepo, cfg.JWTSecret)
 	walletService := service.NewWalletService(walletRepo)
 
+	// Инициализируем обработчики
 	authHandler := NewAuthHandler(authService)
 	walletHandler := NewWalletHandler(walletService)
 
 	router := mux.NewRouter()
 
+	// Применяем middleware для защищенных маршрутов
+	// Регистрация и вход не требуют аутентификации
 	router.HandleFunc("/api/auth", authHandler.Auth).Methods("POST")
 
+	// Защищенные маршруты с middleware
 	protected := router.PathPrefix("/api").Subrouter()
 	protected.Use(middleware.AuthMiddleware(authService))
 
+	// Роуты, которые требуют аутентификации
 	protected.HandleFunc("/info", walletHandler.GetInfo).Methods("GET")
 	protected.HandleFunc("/sendCoin", walletHandler.Transfer).Methods("POST")
 	protected.HandleFunc("/buy/{item}", walletHandler.BuyItem).Methods("POST")
@@ -54,8 +53,8 @@ func setupRouter() *mux.Router {
 // Получение токена
 func getValidToken() string {
 	reqBody, _ := json.Marshal(map[string]string{
-		"username": "testuser",
-		"password": "password",
+		"username": "testuser111",
+		"password": "password111",
 	})
 
 	req := httptest.NewRequest("POST", "/api/auth", bytes.NewBuffer(reqBody))
@@ -65,13 +64,13 @@ func getValidToken() string {
 	router := setupRouter()
 	router.ServeHTTP(w, req)
 
+	fmt.Println("Response body:", w.Body.String())
 	var resp map[string]string
 	err := json.Unmarshal(w.Body.Bytes(), &resp)
 	if err != nil {
 		fmt.Printf("Ошибка парсинга JSON: %v\n", err)
 		return ""
 	}
-
 	return resp["token"]
 }
 
