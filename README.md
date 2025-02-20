@@ -89,7 +89,6 @@ ON CONFLICT (item) DO NOTHING;
 
 ```
 ### 5. Запуск тестов
-Тесты работают **при локальном развертывании сервиса c созданием .env файла в корневой директории (avito-shop-service)** и **развертывании БД через docker-compose**.
 ```bash
 go test ./...
 go test -cover  ./...
