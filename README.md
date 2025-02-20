@@ -11,14 +11,23 @@ cd avito-shop-service
 
 ### 2. Настройка конфигурации
 - Корневая директория - avito-shop-service.
-- docker-compose.yml расположен в avito-shop-service/deployments
-- ✅ Если база данных развертывается с помощью Docker Compose, а **сервис запускается локально**, **ОБЯЗАТЕЛЬНО СОЗДАЙТЕ .env в корневой директории проекта** и добавьте переменные описанные ниже. (Предпочтительный способ развертывания, так как не все тесты работают через полное развертывание приложения и БД в docker-compose)
-- Когда база данных и приложение развертывается с помощью Docker Compose, .env файл **НУЖНО УДАЛИТЬ, дополнительно задавать переменные окружения и конфигурационные параметры не нужно**.
+- docker-compose.yml и DOCKERFILE расположен в avito-shop-service/deployments
+- База данных развертывается с помощью Docker Compose, создавать отдельный .env файл в корневой директории не обязательно. Будут использоваться параметры из config/config.go либо docker-compose.yml. Пример используемых параметров приведен ниже (локальное развертывание приложения и БД через docker-compose)
 
 
 ```bash
-# .env файл
+# .env файл (локальное развертывание)
 DB_HOST=localhost
+DB_PORT=5432
+DB_USER=postgres
+DB_PASSWORD=postgres
+DB_NAME=shop
+JWT_SECRET=supersecretkey
+```
+```bash
+# (Развертывание через docker, параметры из docker-compose)
+APP_ENV=docker
+DB_HOST=db
 DB_PORT=5432
 DB_USER=postgres
 DB_PASSWORD=postgres
@@ -30,14 +39,7 @@ JWT_SECRET=supersecretkey
 ```bash
 docker-compose up -d db
 ```
-### 4. Запуск сервиса локально
-После того как база данных развернута, можно запустить сервис **локально**.
-Убедитесь, что в корне проекта **создан файл .env**, как указано в разделе выше.
-```bash
-cd avito-shop-service/cmd/shop-service
-go run main.go
-```
-### 5. Применение миграций
+### 4. Применение миграций
 При запуске приложения миграции для создания таблиц в базе данных будут применены автоматически. 
 - Миграции расположены в avito-shop-service/internal/db/migrations
 - В БД создаются следующие таблицы:
@@ -86,7 +88,7 @@ INSERT INTO shop (item, price) VALUES
 ON CONFLICT (item) DO NOTHING;
 
 ```
-### 6. Запуск тестов
+### 5. Запуск тестов
 Тесты работают **при локальном развертывании сервиса c созданием .env файла в корневой директории (avito-shop-service)** и **развертывании БД через docker-compose**.
 ```bash
 go test ./...
@@ -101,7 +103,7 @@ go test -cover  ./...
 - avito-shop-service/internal/handlers
 
 
-### 7. Запуск линтера
+### 6. Запуск линтера
 ```bash
 golangci-lint run
 ```
