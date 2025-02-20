@@ -11,7 +11,7 @@ cd avito-shop-service
 
 ### 2. Настройка конфигурации
 - Корневая директория - avito-shop-service.
-- docker-compose.yml и DOCKERFILE расположен в avito-shop-service/deployments
+- docker-compose.yml и Dockerfile расположен в avito-shop-service/deployments
 - База данных развертывается с помощью Docker Compose, создавать отдельный .env файл в корневой директории не обязательно. Будут использоваться параметры из config/config.go либо docker-compose.yml. Пример используемых параметров приведен ниже (локальное развертывание приложения и БД через docker-compose)
 
 
